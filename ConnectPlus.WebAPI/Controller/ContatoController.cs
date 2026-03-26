@@ -120,50 +120,65 @@ public class ContatoController : ControllerBase
     /// <param name="contato">Dados do contato atualizado</param>
     /// <returns>Status Code 200 e os dados do contato atualizado</returns> 
     [HttpPut("{id}")]
-    public async Task<IActionResult> Atualizar(Guid id, [FromForm] ContatoDTO contato)
-    {
-        var contatoBuscado = _contatoRepository.BuscarPorId(id);
-        if (contatoBuscado == null)
+        public async Task<IActionResult> Atualizar(Guid id, [FromForm] ContatoDTO contato)
         {
-            return NotFound("Contato não encontrado");
-        }
-        if (contato.Imagem != null && contato.Imagem.Length > 0)
-        {
-            var pastaRelativa = "wwwroot/imagens";
-            var caminhoPasta = Path.Combine(Directory.GetCurrentDirectory(), pastaRelativa);
-            if (!String.IsNullOrEmpty(contatoBuscado.Imagem))
+            var contatoBuscado = _contatoRepository.BuscarPorId(id);
+
+            if (contatoBuscado == null)
             {
-                var caminhoAntigo = Path.Combine(caminhoPasta, contatoBuscado.Imagem);
-                if (System.IO.File.Exists(caminhoAntigo))
+                return NotFound("Contato não encontrado");
+            }
+
+            // Atualiza os dados básicos
+            contatoBuscado.Nome = contato.Nome;
+            contatoBuscado.FormaContato = contato.FormaDeContato;
+
+
+            // Atualiza a imagem (se vier uma nova)
+            if (contato.Imagem != null && contato.Imagem.Length > 0)
+            {
+                var pastaRelativa = "wwwroot/imagens";
+                var caminhoPasta = Path.Combine(Directory.GetCurrentDirectory(), pastaRelativa);
+
+                // Deleta imagem antiga
+                if (!string.IsNullOrEmpty(contatoBuscado.Imagem))
                 {
-                    System.IO.File.Delete(caminhoAntigo);
+                    var caminhoAntigo = Path.Combine(caminhoPasta, contatoBuscado.Imagem);
+                    if (System.IO.File.Exists(caminhoAntigo))
+                    {
+                        System.IO.File.Delete(caminhoAntigo);
+                    }
                 }
+
+                var extensao = Path.GetExtension(contato.Imagem.FileName);
+                var nomeArquivo = $"{Guid.NewGuid()}{extensao}";
+
+                if (!Directory.Exists(caminhoPasta))
+                {
+                    Directory.CreateDirectory(caminhoPasta);
+                }
+
+                var caminhoCompleto = Path.Combine(caminhoPasta, nomeArquivo);
+
+                using (var stream = new FileStream(caminhoCompleto, FileMode.Create))
+                {
+                    await contato.Imagem.CopyToAsync(stream);
+                }
+
+                contatoBuscado.Imagem = nomeArquivo;
             }
 
-            var extensao = Path.GetExtension(contato.Imagem.FileName);
-            var nomeArquivo = $"{Guid.NewGuid()}{extensao}";
-
-            if (!Directory.Exists(caminhoPasta))
+            try
             {
-                Directory.CreateDirectory(caminhoPasta);
+                _contatoRepository.Atualizar(id, contatoBuscado);
+                return Ok(contatoBuscado);
             }
-            var caminhoCompleto = Path.Combine(caminhoPasta, nomeArquivo);
-            using (var stream = new FileStream(caminhoCompleto, FileMode.Create))
+            catch (Exception erro)
             {
-                await contato.Imagem.CopyToAsync(stream);
+                return BadRequest(erro.Message);
             }
-            contatoBuscado.Imagem = nomeArquivo;
         }
-        try
-        {
-            _contatoRepository.Atualizar(id, contatoBuscado);
-            return Ok(contatoBuscado);
-        }
-        catch (Exception erro)
-        {
-            return BadRequest(erro.Message);
-        }
-    }
+    
     /// <summary>
     /// Endpoint da API para buscar um contato pelo seu id
     /// </summary>

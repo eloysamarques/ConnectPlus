@@ -20,5 +20,5 @@ CREATE TABLE Contato
    
     IdTipoContato  UNIQUEIDENTIFIER NOT NULL FOREIGN KEY REFERENCES TipoContato(IdTipoContato)
 );
-SELECT * FROM Contato
+SELECT * FROM TipoContato
 GO
