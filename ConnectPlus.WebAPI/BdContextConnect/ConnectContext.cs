@@ -9,6 +9,7 @@ public partial class ConnectContext : DbContext
 {
     public ConnectContext()
     {
+
     }
 
     public ConnectContext(DbContextOptions<ConnectContext> options)
